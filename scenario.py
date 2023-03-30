@@ -77,24 +77,32 @@ def add_scenario(scenarios, ens_AL, k, V):
 
 def add_scenarios(scenarios, ens_AL, j=0, V=None):
     print("j", j)
-    print("k", len(ens_AL))
-
     if j == 0:
         for sous_scenario in ens_AL[j]:
             scenarios.append([V, sous_scenario])
+        print("scenarios", scenarios)
+        print("")
         add_scenarios(scenarios, ens_AL, j+1)
-        print("j=0 scenarios", scenarios)
 
     elif j < len(ens_AL):
         new_scenarios = []
         for scenario in scenarios:
+            print("scenario", scenario)
             for sous_scenario in ens_AL[j]:
-                sc = scenario
+                print("sous_scenario", sous_scenario)
+                sc = scenario.copy()
+                print("b", sc)
                 sc.append(sous_scenario)
+                print("a", sc)
                 new_scenarios.append(sc)
-        scenarios = new_scenarios
-        print("scenario", scenarios)
+        scenarios[:] = new_scenarios[:]  # garder même pointeur
+        print("scenarios")
+        for s in scenarios:
+            print(s)
+        print("")
+        print("oo", scenarios)
         add_scenarios(scenarios, ens_AL, j+1)
+
     return
 
 
@@ -106,9 +114,9 @@ def calc_partitions(J, k):
 # L = [1, 2, 3, 4] k = 2 racine = 1
 ens_AL = [[[2, [3]], [3, [2]]], [[4]]]
 scenarios = []
-ens_AL = [[[3], [2]], [[4], [3]]]
-add_scenarios(scenarios, ens_AL, 1)
-print(scenarios)
+# ens_AL = [[[4]], [[3]]]
+add_scenarios(scenarios, ens_AL, V=1)
+print("Result", scenarios)
 # calc_partitions([1, 2, 3, 4], 2)
 
 
