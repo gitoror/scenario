@@ -19,13 +19,30 @@ def gen(L):
                 J.pop(i)
                 partitions = calc_partitions(J, k)
                 for partition in partitions:
-                    # Calc les ensembles d'arbres AL1 ... ALk
+                    # Calc les ensembles d'arbres AL1 ... ALk pour la partition donnée
                     ens_AL = []
                     for j in range(0, k):
                         ens_AL.append(gen(partition[j]))
                     # Construire les scénarios
-                    add_scenario(scenarios, ens_AL, k, L[i])
+                    # add_scenario(scenarios, ens_AL, k, L[i])
+                    for new_sc in new_scenarios(ens_AL, L[i]):
+                        scenarios.append(new_sc)
         return scenarios
+
+
+def new_scenarios(ens_AL, j=0, V=None):
+    new_scenarios = []
+    if j == 0:
+        for sous_scenario in ens_AL[0]:
+            scenario = [V]
+            scenario.append(sous_scenario)
+            scenario.append(new_scenarios(ens_AL, j+1))
+            new_scenarios.append(scenario)
+    else:
+        for sous_scenario in ens_AL[j]:
+            new_scenarios.append(sous_scenario)
+
+    return new_scenarios
 
 
 def add_scenario(scenarios, ens_AL, k, V):
@@ -34,21 +51,51 @@ def add_scenario(scenarios, ens_AL, k, V):
     #         # ...
     #         for sck in ens_AL[k-1]:
     #             scenarios.append([V, sc1, sc2, ..., sck])
-    if len(scenario) == 0:
-        scenarios.append([V])
-    else:
-        scs_to_add = []  # eviter une boucle infinie
+    scs = scenarios.copy()
+    if len(scs) == 0:
+        scs.append([V])
+    print("call", scenarios)
+    scs_to_add = []  # eviter une boucle infinie
+    for scenario in scs:
+        print("scenario", scenario)
+        j = len(scenario)-1  # nombre d'enfants
+        if j == k:
+            return scenarios
+        for sous_sc in ens_AL[j]:
+            # ajouter len(ens_AL[k]) nouveaux scenarios
+            sc_to_add = scenario.copy()
+            sc_to_add.append(sous_sc)
+            scs_to_add.append(sc_to_add)
+            print(sc_to_add)
+    print(scs_to_add)
+    for scenario in scs_to_add:
+        scenarios.append(scenario)
+    print("scenarios", scenarios)
+    print("")
+    add_scenario(scenarios, ens_AL, k, V)
+
+
+def add_scenarios(scenarios, ens_AL, j=0, V=None):
+    print("j", j)
+    print("k", len(ens_AL))
+
+    if j == 0:
+        for sous_scenario in ens_AL[j]:
+            scenarios.append([V, sous_scenario])
+        add_scenarios(scenarios, ens_AL, j+1)
+        print("j=0 scenarios", scenarios)
+
+    elif j < len(ens_AL):
+        new_scenarios = []
         for scenario in scenarios:
-            j = len(scenario)
-            if j == k+1:
-                return scenarios
-            for sous_sc in ens_AL[j]:
-                # ajouter len(ens_AL[k]) nouveaux scenarios
-                sc_to_add = scenario.copy()
-                sc_to_add.add(sous_sc)
-        for scenario in scs_to_add:
-            scenarios.append(scenario)
-        add_scenario(scenarios, ens_AL, k, V)
+            for sous_scenario in ens_AL[j]:
+                sc = scenario
+                sc.append(sous_scenario)
+                new_scenarios.append(sc)
+        scenarios = new_scenarios
+        print("scenario", scenarios)
+        add_scenarios(scenarios, ens_AL, j+1)
+    return
 
 
 def calc_partitions(J, k):
@@ -56,6 +103,12 @@ def calc_partitions(J, k):
         print(list(map(lambda x: list(x), list(it.combinations(J, m)))))
 
 
+# L = [1, 2, 3, 4] k = 2 racine = 1
+ens_AL = [[[2, [3]], [3, [2]]], [[4]]]
+scenarios = []
+ens_AL = [[[3], [2]], [[4], [3]]]
+add_scenarios(scenarios, ens_AL, 1)
+print(scenarios)
 # calc_partitions([1, 2, 3, 4], 2)
 
 
@@ -93,4 +146,4 @@ def partitions(ensemble, k):
     return resultat
 
 
-print(partitions([1, 2, 3, 4], 2))
+# print(partitions([1, 2, 3, 4], 2))
