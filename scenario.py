@@ -49,9 +49,41 @@ def add_scenarios(scenarios, ens_AL, j=0, V=None):
 # Idee garder toutes les combinaisons dont la reunion est J et l'intersection vide
 
 
-def calc_partitions(J, k):
-    for m in range(1, len(J)-k+2):
-        print(list(map(lambda x: set(x), list(it.combinations(J, m)))))
+def calc_partitions(J):
+    if len(J) == 1:
+        return [[J]]
+    else:
+        e = J[0]  # arbitraire
+        H = J.copy()
+        H.pop(0)
+        # ensemble d'ensembles de partitions
+        Pcursif = calc_partitions(H)
+        partitions_seul = []
+        partitions_pls = []
+        for partition in Pcursif:
+            p_seul = partition.copy()
+            p_seul.append([e])  # partie = singleton
+            partitions_seul.append(p_seul)
+            for i in range(len(partition)):
+                partie = partition[i]
+                p = partie.copy()
+                p.append(e)
+                partition_pls = partition.copy()
+                partition_pls.pop(i)
+                partition_pls.append(p)
+                partitions_pls.append(partition_pls)
+        partitions_ret = []
+        for partition in partitions_seul:
+            partitions_ret.append(partition)
+        for partition in partitions_pls:
+            partitions_ret.append(partition)
+        return partitions_ret
+
+
+P = calc_partitions([1, 2, 3, 4, 5])
+print("\nResult")
+for p in P:
+    print(p)
 
 
 def calc_risque(scenario, probas, gravites, pere=None):
@@ -83,7 +115,7 @@ scenarios = []
 # add_scenarios(scenarios, ens_AL, V=1)
 # print("Result", scenarios)
 
-calc_partitions([1, 2, 3], 2)
+# calc_partitions([1, 2, 3], 2)
 # Attendu : [ [[1,2], [3]],   [[1,3], [2]],   [[3,2], [1]] ]
 
 
@@ -105,3 +137,7 @@ def build_partitions(partitions, combs, k, size=0):
     if size == 0:
         for comb in combs[size]:
             partitions.append([[], [], []])
+
+
+# for m in range(1, len(J)-k+2):
+#     print(list(map(lambda x: set(x), list(it.combinations(J, m)))))
