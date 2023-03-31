@@ -2,11 +2,6 @@ import itertools as it
 import numpy as np
 
 
-J = [1, 2, 3, 4]
-k = 2
-partitions = list(map(lambda x: set(x), list(it.combinations(J, k))))
-
-
 def gen(L):
     if len(L) == 1:
         return L
@@ -20,59 +15,12 @@ def gen(L):
                 partitions = calc_partitions(J, k)
                 for partition in partitions:
                     # Calc les ensembles d'arbres AL1 ... ALk pour la partition donnée
-                    ens_AL = []
+                    ens_AL = []  # sera un ensemble d'ensembles de scenarios
                     for j in range(0, k):
                         ens_AL.append(gen(partition[j]))
                     # Construire les scénarios
-                    # add_scenario(scenarios, ens_AL, k, L[i])
-                    for new_sc in new_scenarios(ens_AL, L[i]):
-                        scenarios.append(new_sc)
+                    add_scenarios(scenarios, ens_AL, V=L[i])
         return scenarios
-
-
-def new_scenarios(ens_AL, j=0, V=None):
-    new_scenarios = []
-    if j == 0:
-        for sous_scenario in ens_AL[0]:
-            scenario = [V]
-            scenario.append(sous_scenario)
-            scenario.append(new_scenarios(ens_AL, j+1))
-            new_scenarios.append(scenario)
-    else:
-        for sous_scenario in ens_AL[j]:
-            new_scenarios.append(sous_scenario)
-
-    return new_scenarios
-
-
-def add_scenario(scenarios, ens_AL, k, V):
-    # for sc1 in ens_AL[0]:
-    #     for sc2 in ens_AL[1]:
-    #         # ...
-    #         for sck in ens_AL[k-1]:
-    #             scenarios.append([V, sc1, sc2, ..., sck])
-    scs = scenarios.copy()
-    if len(scs) == 0:
-        scs.append([V])
-    print("call", scenarios)
-    scs_to_add = []  # eviter une boucle infinie
-    for scenario in scs:
-        print("scenario", scenario)
-        j = len(scenario)-1  # nombre d'enfants
-        if j == k:
-            return scenarios
-        for sous_sc in ens_AL[j]:
-            # ajouter len(ens_AL[k]) nouveaux scenarios
-            sc_to_add = scenario.copy()
-            sc_to_add.append(sous_sc)
-            scs_to_add.append(sc_to_add)
-            print(sc_to_add)
-    print(scs_to_add)
-    for scenario in scs_to_add:
-        scenarios.append(scenario)
-    print("scenarios", scenarios)
-    print("")
-    add_scenario(scenarios, ens_AL, k, V)
 
 
 def add_scenarios(scenarios, ens_AL, j=0, V=None):
@@ -83,7 +31,6 @@ def add_scenarios(scenarios, ens_AL, j=0, V=None):
         print("scenarios", scenarios)
         print("")
         add_scenarios(scenarios, ens_AL, j+1)
-
     elif j < len(ens_AL):
         new_scenarios = []
         for scenario in scenarios:
@@ -91,33 +38,20 @@ def add_scenarios(scenarios, ens_AL, j=0, V=None):
             for sous_scenario in ens_AL[j]:
                 print("sous_scenario", sous_scenario)
                 sc = scenario.copy()
-                print("b", sc)
                 sc.append(sous_scenario)
-                print("a", sc)
                 new_scenarios.append(sc)
-        scenarios[:] = new_scenarios[:]  # garder même pointeur
-        print("scenarios")
-        for s in scenarios:
-            print(s)
+                print(sc)
         print("")
-        print("oo", scenarios)
+        scenarios[:] = new_scenarios[:]  # garder même pointeur
         add_scenarios(scenarios, ens_AL, j+1)
-
     return
+
+# Idee garder toutes les combinaisons dont la reunion est J et l'intersection vide
 
 
 def calc_partitions(J, k):
     for m in range(1, len(J)-k+2):
-        print(list(map(lambda x: list(x), list(it.combinations(J, m)))))
-
-
-# L = [1, 2, 3, 4] k = 2 racine = 1
-ens_AL = [[[2, [3]], [3, [2]]], [[4]]]
-scenarios = []
-# ens_AL = [[[4]], [[3]]]
-add_scenarios(scenarios, ens_AL, V=1)
-print("Result", scenarios)
-# calc_partitions([1, 2, 3, 4], 2)
+        print(list(map(lambda x: set(x), list(it.combinations(J, m)))))
 
 
 def calc_risque(scenario, probas, gravites, pere=None):
@@ -138,20 +72,36 @@ proba = np.array([[0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4],
 
 # print(calc_risque([0, [1, [2]], [3]], proba, gravite)) # 1.3
 
+J = [1, 2, 3, 4]
+k = 2
+partitions = list(map(lambda x: list(x), list(it.combinations(J, k))))
 
-def partitions(ensemble, k):
-    n = len(ensemble)
-    if k == 1:
-        return [ensemble]
-    if n < k:
-        return []
-    resultat = []
-    for i in range(n):
-        premier = ensemble[i:i+1]
-        partitions_restes = partitions(ensemble[:i] + ensemble[i+1:], k-1)
-        for partition in partitions_restes:
-            resultat.append([premier] + partition)
-    return resultat
+# L = [1, 2, 3, 4] k = 2 racine = 1
+ens_AL = [[[2, [3]], [3, [2]]], [[4]]]
+# ens_AL = [[[4]], [[3]]]
+scenarios = []
+# add_scenarios(scenarios, ens_AL, V=1)
+# print("Result", scenarios)
+
+calc_partitions([1, 2, 3], 2)
+# Attendu : [ [[1,2], [3]],   [[1,3], [2]],   [[3,2], [1]] ]
 
 
-# print(partitions([1, 2, 3, 4], 2))
+def cal_partitions(J, k):
+    combs = []
+    for m in range(1, len(J)-k+2):  # n-k+1 = taille max des parties
+        comb = list(map(lambda x: set(x), list(it.combinations(J, m))))
+        print(comb)
+        combs.append(comb)
+    partitions = []
+    build_partitions(partitions, combs, k)
+    # reste à sélectionner celle qui respectent ces critères :
+    # union = J
+    # intersection = vide
+    return partitions
+
+
+def build_partitions(partitions, combs, k, size=0):
+    if size == 0:
+        for comb in combs[size]:
+            partitions.append([[], [], []])
