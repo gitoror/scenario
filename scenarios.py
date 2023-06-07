@@ -1,3 +1,5 @@
+import copy
+import csv
 import itertools as it
 import numpy as np
 
@@ -91,34 +93,99 @@ def calc_risque(scenario, probas, gravites, pere=None):
     # parcours en profondeur
     racine = scenario[0]
     if pere == None:
-        risque = proba[racine, racine] * gravite[racine]
+        risque = probas[racine, racine] * gravites[racine]
     else:
-        risque = proba[racine, pere] * gravite[racine]
+        risque = probas[racine, pere] * gravites[racine]
     for i in range(1, len(scenario)):
         risque += calc_risque(scenario[i], probas, gravites, racine)
     return risque
 
 
-gravite = np.array([1, 2, 3, 4])
-proba = np.array([[0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4],
-                 [0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4]])
+def calc_risque_max(scenario, probas, gravites, pere=None):
+    # parcours en profondeur
+    racine = scenario[0]
+    if pere == None:
+        risque = probas[racine, racine] * gravites[racine]
+    else:
+        risque = probas[racine, pere] * gravites[racine]
+    for i in range(1, len(scenario)):
+        risque = max(risque, calc_risque_max(
+            scenario[i], probas, gravites, racine))
+    return risque
+
+
+# gravite = np.array([1, 2, 3, 4])
+# proba = np.array([[0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4],
+#                  [0.1, 0.2, 0.3, 0.4], [0.1, 0.2, 0.3, 0.4]])
 
 # print(calc_risque([0, [1, [2]], [3]], proba, gravite)) # 1.3
+# print(calc_risque_max([0, [1, [2]], [3]], proba, gravite))  # 0.6
 
 
-def pires_scenarios(evenements, probas, gravites, nb_scenarios=1):
-    scenarios = gen(evenements)
+def remap_scenario(scenario, dic):
+    containsList = False
+    for i in range(len(scenario)):
+        if type(scenario[i]) == list:
+            containsList = True
+            break
+    if not (containsList):
+        for i in range(len(scenario)):
+            scenario[i] = dic[scenario[i]]
+        return scenario
+    else:
+        for i in range(len(scenario)):
+            if type(scenario[i]) == list:
+                scenario[i] = remap_scenario(scenario[i], dic)
+            else:
+                scenario[i] = dic[scenario[i]]
+        return scenario
+
+
+def parse(file):
+    with open(file, 'r') as file:
+        csvreader = csv.reader(file)
+        file = [row for row in csvreader]
+    gravites = []
+    probas = []
+    evenements = []
+    for i in range(1, len(file)):
+        evenements.append(file[i][0])
+        gravites.append(float(file[i][1]))
+        probas.append([float(file[i][j]) for j in range(3, len(file[0]))])
+    gravites = np.array(gravites)
+    probas = np.array(probas)
+    return evenements, probas, gravites
+
+# a : aversion au risque en %
+
+
+def pires_scenarios(file, nb_scenarios=1, a=70, sortBy='Rmoy'):
+    evenements, probas, gravites = parse(file)
+    dic = {}
+    for i in range(len(evenements)):
+        dic[i] = evenements[i]
+    scenarios = gen(list(dic.keys()))
     for s in range(len(scenarios)):
-        scenarios[s] = {'s': scenarios[s], 'r': round(calc_risque(
-            scenarios[s], probas, gravites), 3)}
-    sorted_scenario = sorted(scenarios, key=lambda x: x['r'], reverse=True)
-    # retourner les nb_scenarios premiers 's'
+        Rmoy = calc_risque(
+            scenarios[s], probas, gravites)
+        Rmax = calc_risque_max(scenarios[s], probas, gravites)
+        scenarios[s] = {'s': scenarios[s], 'Rmoy': Rmoy,
+                        'Rmax': Rmax, 'r': a*Rmax + (100-a)*Rmoy}
+
+    sorted_scenario = sorted(scenarios, key=lambda x: x[sortBy], reverse=True)
+    # retourner les nb_scenarios premiers 's' slmt
     # return list(map(lambda x: x['s'], sorted_scenario[:nb_scenarios]))
     S = sorted_scenario[:nb_scenarios]
+    print("\nPires scénarios par ordre décroissant de risque de "+sortBy+" :\n")
+    print("------------------\n")
     for s in S:
-        draw_tree(s['s'], 0)
+        sc = copy.deepcopy(s['s'])
+        sc = remap_scenario(sc, dic)
+        draw_tree(sc, 0)
         print("")
+        print("Risque avec aversion : ", round(s['r']/100, 3))
+        print("Risque moyen : ", round(s['Rmoy'], 3))
+        print("Risque maximal : ", round(s['Rmax'], 3))
+        print("\n------------------\n")
+    print("")
     return S
-
-
-print(pires_scenarios([1, 2, 3], proba, gravite, 3))
